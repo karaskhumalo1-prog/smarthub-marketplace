@@ -36,51 +36,38 @@ export default function Register() {
   }
 
   async function handleSubmit(e) {
-    e.preventDefault()
-    setSubmitting(true)
-    setError('')
+  e.preventDefault()
+  setSubmitting(true)
+  setError('')
 
-    // 1. Create the auth user.
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email: form.email,
-      password: form.password,
-    })
 
-    if (signUpError || !signUpData.user) {
-      setSubmitting(false)
-      setError(signUpError?.message || 'Could not create account.')
-      return
-    }
+  // The database trigger creates the profile and vendor rows for us,
+  // using the details we send here as "data".
+  const { error: signUpError } = await supabase.auth.signUp({
+    email: form.email,
+    password: form.password,
+    options: {
+      data: {
+        business_name: form.businessName,
+        category: form.category,
+        contact_name: form.contactName,
+        phone_number: form.phoneNumber,
+        whatsapp_number: form.whatsappNumber,
+        address: form.address,
+      },
+    },
+  })
 
-    const userId = signUpData.user.id
+  setSubmitting(false)
 
-    // 2. Create the profile row (role defaults to 'vendor' per schema).
-    const { error: profileError } = await supabase.from('profiles').insert({
-      id: userId,
-      role: 'vendor',
-    })
-
-    // 3. Create the vendor business record. is_active defaults to FALSE -
-    // an admin activates the account once the subscription is paid.
-    const { error: vendorError } = await supabase.from('vendors').insert({
-      id: userId,
-      business_name: form.businessName,
-      category: form.category,
-      contact_name: form.contactName,
-      phone_number: form.phoneNumber,
-      whatsapp_number: form.whatsappNumber,
-      address: form.address,
-    })
-
-    setSubmitting(false)
-
-    if (profileError || vendorError) {
-      setError((profileError || vendorError).message)
-      return
-    }
-
-    setDone(true)
+  if (signUpError) {
+    setError(signUpError.message)
+    return
   }
+
+  setDone(true)
+}
+
 
   if (done) {
     return (
